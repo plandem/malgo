@@ -115,18 +115,24 @@ func (c *Converter) ExpectOutputFrameCount(inputFrameCount int) (int, error) {
 // buffer of zeros. The output buffer can also be nil, in which case the processing will be treated
 // as seek.
 func (c *Converter) ProcessFrames(pFramesIn []byte, frameCountIn int, pFramesOut []byte, frameCountOut int) (int, int, error) {
-	if len(pFramesIn) == 0 || len(pFramesOut) == 0 || frameCountIn == 0 || frameCountOut == 0 {
-		return 0, 0, ErrInvalidArgs
+	var cFramesIn unsafe.Pointer
+	if len(pFramesIn) == 0 || pFramesIn == nil {
+		cFramesIn = unsafe.Pointer(nil)
+	} else {
+		cFramesIn = unsafe.Pointer(&pFramesIn[0])
+	}
+
+	var cFramesOut unsafe.Pointer
+	if len(pFramesOut) == 0 || pFramesOut == nil {
+		cFramesOut = unsafe.Pointer(nil)
+	} else {
+		cFramesOut = unsafe.Pointer(&pFramesOut[0])
 	}
 
 	var cFrameCountIn C.ma_uint64 = C.ma_uint64(frameCountIn)
 	var cFrameCountOut C.ma_uint64 = C.ma_uint64(frameCountOut)
 
-	result := C.ma_data_converter_process_pcm_frames(c.cptr(),
-		unsafe.Pointer(&pFramesIn[0]), &cFrameCountIn,
-		unsafe.Pointer(&pFramesOut[0]), &cFrameCountOut,
-	)
-
+	result := C.ma_data_converter_process_pcm_frames(c.cptr(), cFramesIn, &cFrameCountIn, cFramesOut, &cFrameCountOut)
 	if result != 0 {
 		return 0, 0, errorFromResult(result)
 	}
